@@ -20,9 +20,10 @@ import collision_checker
 import velocity_planner
 from math import sin, cos, pi, sqrt
 
+
 class LocalPlanner:
-    def __init__(self, num_paths, path_offset, circle_offsets, circle_radii, 
-                 path_select_weight, time_gap, a_max, slow_speed, 
+    def __init__(self, num_paths, path_offset, circle_offsets, circle_radii,
+                 path_select_weight, time_gap, a_max, slow_speed,
                  stop_line_buffer):
         self._num_paths = num_paths
         self._path_offset = path_offset
@@ -32,7 +33,7 @@ class LocalPlanner:
                                                circle_radii,
                                                path_select_weight)
         self._velocity_planner = \
-            velocity_planner.VelocityPlanner(time_gap, a_max, slow_speed, 
+            velocity_planner.VelocityPlanner(time_gap, a_max, slow_speed,
                                              stop_line_buffer)
 
     ######################################################
@@ -48,7 +49,7 @@ class LocalPlanner:
     # perpendicular to the goal yaw of the ego vehicle.
     def get_goal_state_set(self, goal_index, goal_state, waypoints, ego_state):
         """Gets the goal states given a goal position.
-        
+
         Gets the goal states given a goal position. The states 
 
         args:
@@ -102,14 +103,14 @@ class LocalPlanner:
         if goal_index < len(waypoints)-1:
             delta_x = waypoints[goal_index+1][0] - waypoints[goal_index][0]
             delta_y = waypoints[goal_index+1][1] - waypoints[goal_index][1]
-        else: 
+        else:
             delta_x = waypoints[goal_index][0] - waypoints[goal_index-1][0]
             delta_y = waypoints[goal_index][1] - waypoints[goal_index-1][1]
-        heading = np.arctan2(delta_y,delta_x)
+        heading = np.arctan2(delta_y, delta_x)
 
         # ------------------------------------------------------------------
 
-        # Compute the center goal state in the local frame using 
+        # Compute the center goal state in the local frame using
         # the ego state. The following code will transform the input
         # goal state to the ego vehicle's local frame.
         # The goal state will be of the form (x, y, t, v).
@@ -119,10 +120,10 @@ class LocalPlanner:
         # This is done by subtracting the ego_state from the goal_state_local.
         # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
         # ------------------------------------------------------------------
-        # goal_state_local[0] -= ... 
-        # goal_state_local[1] -= ... 
-        goal_state_local[0] -= ego_state[0] 
-        goal_state_local[1] -= ego_state[1] 
+        # goal_state_local[0] -= ...
+        # goal_state_local[1] -= ...
+        goal_state_local[0] -= ego_state[0]
+        goal_state_local[1] -= ego_state[1]
         # ------------------------------------------------------------------
 
         # Rotate such that the ego state has zero heading in the new frame.
@@ -135,11 +136,13 @@ class LocalPlanner:
         # goal_x = ...
         # goal_y = ...
         theta = -ego_state[2]
-        goal_x = goal_state_local[0] * cos(theta) - goal_state_local[1] * sin(theta)
-        goal_y = goal_state_local[0] * sin(theta) + goal_state_local[1] * cos(theta)
+        goal_x = goal_state_local[0] * \
+            cos(theta) - goal_state_local[1] * sin(theta)
+        goal_y = goal_state_local[0] * \
+            sin(theta) + goal_state_local[1] * cos(theta)
         # ------------------------------------------------------------------
 
-        # Compute the goal yaw in the local frame by subtracting off the 
+        # Compute the goal yaw in the local frame by subtracting off the
         # current ego yaw from the heading variable.
         # TODO: INSERT YOUR CODE BETWEEN THE DASHED LINES
         # ------------------------------------------------------------------
@@ -157,7 +160,7 @@ class LocalPlanner:
             goal_t += 2*pi
 
         # Compute and apply the offset for each path such that
-        # all of the paths have the same heading of the goal state, 
+        # all of the paths have the same heading of the goal state,
         # but are laterally offset with respect to the goal heading.
         goal_state_set = []
         for i in range(self._num_paths):
@@ -177,13 +180,13 @@ class LocalPlanner:
             y_offset = offset * sin(goal_t + pi/2)
             # ------------------------------------------------------------------
 
-            goal_state_set.append([goal_x + x_offset, 
-                                   goal_y + y_offset, 
-                                   goal_t, 
+            goal_state_set.append([goal_x + x_offset,
+                                   goal_y + y_offset,
+                                   goal_t,
                                    goal_v])
-           
-        return goal_state_set  
-              
+
+        return goal_state_set
+
     # Plans the path set using polynomial spiral optimization to
     # each of the goal states.
     def plan_paths(self, goal_state_set):
@@ -220,21 +223,28 @@ class LocalPlanner:
                 (true) or not (false) for the local planner to traverse. Each ith
                 path_validity corresponds to the ith path in the path list.
         """
-        paths         = []
+        paths = []
         path_validity = []
         for goal_state in goal_state_set:
-            path = self._path_optimizer.optimize_spiral(goal_state[0], 
-                                                        goal_state[1], 
+            
+            path = self._path_optimizer.optimize_spiral(goal_state[0],
+                                                        goal_state[1],
                                                         goal_state[2])
-            if np.linalg.norm([path[0][-1] - goal_state[0], 
-                               path[1][-1] - goal_state[1], 
-                               path[2][-1] - goal_state[2]]) > 0.1:
+            print("norm: ", np.linalg.norm([path[0][-1] - goal_state[0],
+                               path[1][-1] - goal_state[1],
+                               path[2][-1] - goal_state[2]]))
+            
+            if np.linalg.norm([path[0][-1] - goal_state[0],
+                               path[1][-1] - goal_state[1],
+                               path[2][-1] - goal_state[2]]) > 0.9:
                 path_validity.append(False)
+                print("if case")
             else:
+                print("else case")
                 paths.append(path)
                 path_validity.append(True)
-
         return paths, path_validity
+
 
 def transform_paths(paths, ego_state):
     """ Converts the to the global coordinate frame.
@@ -274,12 +284,44 @@ def transform_paths(paths, ego_state):
         t_transformed = []
 
         for i in range(len(path[0])):
-            x_transformed.append(ego_state[0] + path[0][i]*cos(ego_state[2]) - \
-                                                path[1][i]*sin(ego_state[2]))
-            y_transformed.append(ego_state[1] + path[0][i]*sin(ego_state[2]) + \
-                                                path[1][i]*cos(ego_state[2]))
+            x_transformed.append(ego_state[0] + path[0][i]*cos(ego_state[2]) -
+                                 path[1][i]*sin(ego_state[2]))
+            y_transformed.append(ego_state[1] + path[0][i]*sin(ego_state[2]) +
+                                 path[1][i]*cos(ego_state[2]))
             t_transformed.append(path[2][i] + ego_state[2])
 
         transformed_paths.append([x_transformed, y_transformed, t_transformed])
 
     return transformed_paths
+
+def main():
+
+    # Planning Constants
+    NUM_PATHS = 7
+    BP_LOOKAHEAD_BASE      = 16.0              # m
+    BP_LOOKAHEAD_TIME      = 1.0              # s
+    PATH_OFFSET            = 1.5              # m
+    CIRCLE_OFFSETS         = [-1.0, 1.0, 3.0] # m
+    CIRCLE_RADII           = [1.5, 1.5, 1.5]  # m
+    TIME_GAP               = 1.0              # s
+    PATH_SELECT_WEIGHT     = 10
+    A_MAX                  = 1.5              # m/s^2
+    SLOW_SPEED             = 2.0              # m/s
+    STOP_LINE_BUFFER       = 3.5              # m
+    LEAD_VEHICLE_LOOKAHEAD = 20.0             # m
+    LP_FREQUENCY_DIVISOR   = 2                # Frequency divisor to make the 
+                                            # local planner operate at a lower
+                                            # frequency than the controller
+                                            # (which operates at the simulation
+                                            # frequency). Must be a natural
+                                            # number.
+    planner = LocalPlanner(NUM_PATHS,
+                            PATH_OFFSET,
+                            CIRCLE_OFFSETS,
+                            CIRCLE_RADII,
+                            PATH_SELECT_WEIGHT,
+                            TIME_GAP,
+                            A_MAX,
+                            SLOW_SPEED,
+                            STOP_LINE_BUFFER)
+    planner.get_goal_state_set()
